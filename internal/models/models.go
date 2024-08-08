@@ -26,8 +26,8 @@ type AutResponse200 struct {
 }
 
 type Flat struct {
-	// Id of a flat
-	Id uint32 `json:"id"`
+	// Number of a flat
+	Number uint32 `json:"id"`
 	// HouseId id of a house
 	HouseId uint32 `json:"house_id"`
 	// Price is a price of a flat

@@ -1,7 +1,7 @@
 package tools
 
 import (
-	"avito/models"
+	"avito/internal/models"
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"

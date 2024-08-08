@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"avito/models"
+	"avito/internal/models"
 	"context"
 	"github.com/gin-gonic/gin"
 	"net/http"

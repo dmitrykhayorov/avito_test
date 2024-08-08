@@ -4,7 +4,7 @@ import (
 	"avito/internal/auth"
 	"avito/internal/flat"
 	"avito/internal/house"
-	"avito/models"
+	"avito/internal/models"
 	"github.com/gin-gonic/gin"
 	"log"
 )

@@ -1,8 +1,8 @@
 package auth
 
 import (
+	"avito/internal/models"
 	"avito/internal/tools"
-	"avito/models"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
