@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -33,18 +34,29 @@ func loadEnvVariables() {
 }
 
 func run() {
+	loadEnvVariables()
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
-	db, err := sql.Open("postgres", connStr)
+	retries := 5
+	var db *sql.DB
+	var err error
 
-	if err != nil {
-		log.Fatalf("cannot connect db")
+	for i := 0; i < retries; i++ {
+		db, err = sql.Open("postgres", connStr)
+
+		err = db.Ping()
+		if err == nil {
+			break
+		}
+		fmt.Println("SLEEEEEEEEPPPPPPPINNNNGGGGG")
+		time.Sleep(time.Second * 5)
 	}
+
 	err = db.Ping()
 	if err != nil {
-		log.Fatalf("cannot connect db")
+		log.Fatalln("cannot connect db: ", err)
 	}
 
 	houseRepository := repository.NewHouseRepository(db)

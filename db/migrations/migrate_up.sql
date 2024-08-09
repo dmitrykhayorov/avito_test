@@ -1,3 +1,5 @@
+CREATE DATABASE margertf;
+
 CREATE TABLE IF NOT EXISTS "user" (
     id SERIAL PRIMARY KEY,
     email_address VARCHAR(100) UNIQUE NOT NULL,

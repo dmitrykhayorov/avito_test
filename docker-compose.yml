@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: my_postgres
+    environment:
+      POSTGRES_USER: margertf
+      POSTGRES_PASSWORD: margertf
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/migrations:/docker-entrypoint-initdb.d
+    entrypoint: [
+      "bash", "-c",
+      "exec docker-entrypoint.sh postgres && psql -U margertf -d postgres -f /docker-entrypoint-initdb.d/migrate_up.sql"
+    ]
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "margertf" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  myservice:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: margertf
+      DB_PASSWORD: margertf
+      DB_NAME: postgres
+      SERVICE_PORT: 8080
+    ports:
+      - "8080:8080"
