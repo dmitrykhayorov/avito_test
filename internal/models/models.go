@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type UserRole string
 type Status string
 
@@ -36,6 +38,15 @@ type Flat struct {
 	Rooms uint32 `json:"rooms"`
 	// Status of a flat
 	Status Status `json:"status"`
+}
+
+type House struct {
+	Id        uint32    `json:"id"`
+	Address   string    `json:"address"`
+	Year      uint32    `json:"year"`
+	Developer string    `json:"developer,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
 type FlatCreateResponse200 struct {

@@ -8,11 +8,11 @@ CREATE TABLE IF NOT EXISTS "user" (
 
 CREATE TABLE IF NOT EXISTS "house" (
     id SERIAL PRIMARY KEY,
-    address VARCHAR(255) NOT NULL,
-    construction_year INT NOT NULL,
-    construction_company VARCHAR(255),
+    address VARCHAR(255) NOT NULL UNIQUE,
+    year INT NOT NULL,
+    developer VARCHAR(255),
     date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_apartment_added TIMESTAMP WITH TIME ZONE
+    last_flat_added TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS "flat" (
@@ -29,7 +29,7 @@ CREATE OR REPLACE FUNCTION refresh_last_flat_added()
     RETURNS TRIGGER AS $$
 BEGIN
 UPDATE house
-SET last_apartment_added = CURRENT_TIMESTAMP
+SET last_flat_added = CURRENT_TIMESTAMP
 WHERE id = NEW.house_id;
 RETURN NEW;
 END;
