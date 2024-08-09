@@ -24,12 +24,11 @@ import (
 )
 
 var (
-	dbHost      string
-	dbPort      string
-	dbUser      string
-	dbPassword  string
-	dbName      string
-	servicePort string
+	dbHost     string
+	dbPort     string
+	dbUser     string
+	dbPassword string
+	dbName     string
 )
 
 func loadEnvVariables() {
@@ -38,7 +37,6 @@ func loadEnvVariables() {
 	dbUser = os.Getenv("DB_USER")
 	dbPassword = os.Getenv("DB_PASSWORD")
 	dbName = os.Getenv("DB_NAME")
-	servicePort = os.Getenv("SERVICE_PORT")
 }
 
 func prepareServer() *api.Server {
@@ -81,8 +79,9 @@ func prepareServer() *api.Server {
 var server = prepareServer()
 var tokenClient = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyUm9sZSI6ImNsaWVudCIsImV4cCI6MTcyMzI3Njk3N30.wMeyv_z6OS-sJ9ljWPj6p4fY6J3wb4jNmqtMzSS6X6o"
 var tokenModerator = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyUm9sZSI6Im1vZGVyYXRvciIsImV4cCI6MTcyMzI3Njc5MX0.nzY7fPqrOqvJaIXUtEN7BCCS4so_YPZ2Dk3srwW1lU0"
+var url = "http://localhost:8080/flat/create"
 
-func TestFlatHandler_Create(t *testing.T) {
+func TestFlatHandler_CreateValidInput(t *testing.T) {
 	flatToCreateValid := models.FlatCreateRequestBody{
 		HouseId: 1,
 		Price:   100,
@@ -94,10 +93,116 @@ func TestFlatHandler_Create(t *testing.T) {
 
 	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/create", bytes.NewBuffer(body))
 	req.Header.Set("Authorization", tokenModerator)
+
 	server.Router.ServeHTTP(w, req)
+	//d, _ := io.ReadAll(w.Body)
 	assert.Equal(t, 200, w.Code)
 
-	req.Header.Set("Authorization", tokenClient)
 	server.Router.ServeHTTP(w, req)
+	//d, _ = io.ReadAll(w.Body)
 	assert.Equal(t, 200, w.Code)
+}
+
+func TestFlatHandler_CreateInvalidInput(t *testing.T) {
+	flatInvalid := []models.FlatCreateRequestBody{
+		{
+			HouseId: 1_000_000_000,
+			Price:   100,
+			Rooms:   4,
+		},
+		{
+			HouseId: 1,
+			Rooms:   4,
+		},
+		{
+			HouseId: 1,
+			Price:   100,
+			Rooms:   0,
+		},
+		{
+			HouseId: 0,
+			Price:   10101,
+			Rooms:   5,
+		},
+	}
+
+	w := httptest.NewRecorder()
+	for _, flat := range flatInvalid {
+		t.Run("", func(t *testing.T) {
+			body, _ := json.Marshal(flat)
+			req, _ := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
+			server.Router.ServeHTTP(w, req)
+			assert.NotEqual(t, 200, w.Code)
+		})
+	}
+}
+
+func TestFlatHandler_CreateUnauthorized(t *testing.T) {
+	flatToCreateValid := models.FlatCreateRequestBody{
+		HouseId: 1,
+		Price:   100,
+		Rooms:   1,
+	}
+
+	body, _ := json.Marshal(flatToCreateValid)
+
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/create", bytes.NewBuffer(body))
+
+	server.Router.ServeHTTP(w, req)
+
+	assert.Equal(t, 401, w.Code)
+}
+
+func TestFlatHandler_UpdateUnauthorized(t *testing.T) {
+	body := models.FlatUpdateRequestBody{
+		FlatId: 4,
+		Status: "approved",
+	}
+
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/create", bytes.NewBuffer(jsonBody))
+	server.Router.ServeHTTP(w, req)
+
+	assert.Equal(t, 401, w.Code)
+	req.Header.Set("Authorization", tokenClient)
+	assert.Equal(t, 401, w.Code)
+}
+
+func TestFlatHandler_UpdateValid(t *testing.T) {
+	body := models.FlatUpdateRequestBody{
+		FlatId: 4,
+		Status: "approved",
+	}
+
+	jsonBody, _ := json.Marshal(body)
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/update", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", tokenModerator)
+	server.Router.ServeHTTP(w, req)
+
+	//d, _ := io.ReadAll(w.Body)
+	//fmt.Println(string(d))
+	assert.Equal(t, 200, w.Code)
+}
+
+func TestFlatHandler_UpdateInvalidRequest(t *testing.T) {
+	body := models.FlatUpdateRequestBody{
+		FlatId: 4,
+		Status: "pending",
+	}
+
+	jsonBody, _ := json.Marshal(body)
+	w := httptest.NewRecorder()
+
+	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/update", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", tokenModerator)
+	server.Router.ServeHTTP(w, req)
+
+	assert.Equal(t, 400, w.Code)
 }
