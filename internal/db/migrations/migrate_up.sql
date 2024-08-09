@@ -12,17 +12,17 @@ CREATE TABLE IF NOT EXISTS "house" (
     year INT NOT NULL,
     developer VARCHAR(255),
     date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_flat_added TIMESTAMP WITH TIME ZONE
+    last_flat_added TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS "flat" (
-    number INT,
+    id SERIAL,
     house_id INT NOT NULL REFERENCES house(id),
     price INT NOT NULL,
-    rooms INT NOT NULL,
-    apartment_status VARCHAR(50) NOT NULL,
+    rooms INT NOT NULL DEFAULT 1,
+    status VARCHAR(50) NOT NULL,
     date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (number, house_id)
+    PRIMARY KEY (id, house_id)
 );
 
 CREATE OR REPLACE FUNCTION refresh_last_flat_added()

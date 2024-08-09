@@ -38,7 +38,7 @@ func (s *Server) routes() {
 	{
 		flatRoutes.POST("/create", s.flatHandler.Create)
 		// TODO: create handler for updating a flat
-		flatRoutes.POST("/update", auth.RoleMiddleware(models.Moderator))
+		flatRoutes.POST("/update", auth.RoleMiddleware(models.Moderator), s.flatHandler.Update)
 	}
 
 	// TODO: implement house logic
@@ -46,7 +46,7 @@ func (s *Server) routes() {
 	houseRoutes.Use(auth.AuthMiddleware())
 	{
 		houseRoutes.POST("/create", auth.RoleMiddleware(models.Moderator), s.houseHandler.Create)
-		houseRoutes.GET("/:id", s.houseHandler.Get)
+		houseRoutes.GET("/:id", s.houseHandler.GetFlatsByHouseID)
 	}
 
 }

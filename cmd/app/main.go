@@ -15,6 +15,7 @@ import (
 func main() {
 	connStr := "host=localhost port=5443 dbname=postgres sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
+
 	if err != nil {
 		log.Fatalf("cannot connect db")
 	}
@@ -22,10 +23,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("cannot connect db")
 	}
+
 	houseRepository := repository.NewHouseRepository(db)
+	flatRepository := repository.NewFlatRepository(db)
 
 	authHandler := auth.NewAuthHandler()
-	flatHandler := flat.NewFlatHandler()
+	flatHandler := flat.NewFlatHandler(flatRepository)
 	houseHandler := house.NewHouseHandler(houseRepository)
 
 	server := api.NewServer(authHandler, flatHandler, houseHandler)

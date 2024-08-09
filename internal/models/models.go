@@ -33,11 +33,12 @@ type Flat struct {
 	// HouseId id of a house
 	HouseId uint32 `json:"house_id"`
 	// Price is a price of a flat
-	Price uint32 `json:"price"`
+	Price *uint32 `json:"price"`
 	// Rooms is number of rooms in a flat
-	Rooms uint32 `json:"rooms"`
+	Rooms *uint32 `json:"rooms"`
 	// Status of a flat
-	Status Status `json:"status"`
+	Status    Status     `json:"status"`
+	CreatedAt *time.Time `json:"created_at"`
 }
 
 type House struct {
@@ -46,7 +47,7 @@ type House struct {
 	Year      uint32    `json:"year"`
 	Developer string    `json:"developer,omitempty"`
 	CreatedAt time.Time `json:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty" db:",omitempty"`
 }
 
 type FlatCreateResponse200 struct {
