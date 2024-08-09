@@ -50,6 +50,12 @@ type House struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty" db:",omitempty"`
 }
 
+type FlatCreateRequestBody struct {
+	HouseId uint32 `json:"house_id"`
+	Price   uint32 `json:"price"`
+	Rooms   uint32 `json:"rooms,omitempty"`
+}
+
 type FlatCreateResponse200 struct {
 	Flat *Flat
 }

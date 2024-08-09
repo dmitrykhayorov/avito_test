@@ -25,6 +25,7 @@ func (h *AuthHandler) DummyLogin(c *gin.Context) {
 			Message: "user type is not specified",
 		}
 		c.JSON(http.StatusInternalServerError, response)
+		c.Abort()
 		return
 	}
 
@@ -34,6 +35,7 @@ func (h *AuthHandler) DummyLogin(c *gin.Context) {
 			Message: err.Error(),
 		}
 		c.JSON(http.StatusInternalServerError, response)
+		c.Abort()
 		return
 	}
 

@@ -21,8 +21,8 @@ CREATE TABLE IF NOT EXISTS "flat" (
     id SERIAL,
     house_id INT NOT NULL REFERENCES house(id),
     price INT NOT NULL,
-    rooms INT NOT NULL DEFAULT 1,
-    status VARCHAR(50) NOT NULL,
+    rooms INT DEFAULT 1,
+    status VARCHAR(50) NOT NULL DEFAULT 'created',
     date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id, house_id)
 );

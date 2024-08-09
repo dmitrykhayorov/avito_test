@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	expirePeriod time.Duration = time.Hour * time.Duration(3)
+	expirePeriod time.Duration = time.Hour * time.Duration(10)
 )
 
 type AuthService struct{}

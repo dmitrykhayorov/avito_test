@@ -19,8 +19,15 @@ func NewFlatRepository(db *sql.DB) *FlatRepository {
 }
 
 func (r *FlatRepository) Create(flat models.Flat) (models.Flat, error) {
-	query := sq.Insert("flat").Columns("house_id", "price", "rooms", "status").
-		Values(flat.HouseId, flat.Price, flat.Rooms, models.Created).
+	columns := []string{"house_id", "price"}
+	values := []interface{}{flat.HouseId, flat.Price}
+	if flat.Rooms != nil {
+		columns = append(columns, "rooms")
+		values = append(values, flat.Rooms)
+	}
+
+	query := sq.Insert("flat").Columns(columns...).
+		Values(values...).
 		Suffix("RETURNING *").PlaceholderFormat(sq.Dollar)
 
 	rows, err := query.RunWith(r.db).Query()

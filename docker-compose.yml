@@ -11,11 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db/migrations:/docker-entrypoint-initdb.d
-    entrypoint: [
-      "bash", "-c",
-      "exec docker-entrypoint.sh postgres && psql -U margertf -d postgres -f /docker-entrypoint-initdb.d/migrate_up.sql"
-    ]
+      - ./db/migrations/migrate_up.sql:/docker-entrypoint-initdb.d/migrate_up.sql
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "margertf" ]
       interval: 10s
@@ -34,5 +30,6 @@ services:
       DB_PASSWORD: margertf
       DB_NAME: postgres
       SERVICE_PORT: 8080
+      SECRET_STRING: your_secret_string
     ports:
       - "8080:8080"
