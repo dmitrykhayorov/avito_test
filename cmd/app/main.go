@@ -7,13 +7,36 @@ import (
 	"avito/internal/house"
 	"avito/internal/repository"
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 )
 
-func main() {
-	connStr := "host=localhost port=5443 dbname=postgres sslmode=disable"
+var (
+	dbHost      string
+	dbPort      string
+	dbUser      string
+	dbPassword  string
+	dbName      string
+	servicePort string
+)
+
+func loadEnvVariables() {
+	dbHost = os.Getenv("DB_HOST")
+	dbPort = os.Getenv("DB_PORT")
+	dbUser = os.Getenv("DB_USER")
+	dbPassword = os.Getenv("DB_PASSWORD")
+	dbName = os.Getenv("DB_NAME")
+	servicePort = os.Getenv("SERVICE_PORT")
+}
+
+func run() {
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPassword, dbName)
+
 	db, err := sql.Open("postgres", connStr)
 
 	if err != nil {
@@ -32,5 +55,9 @@ func main() {
 	houseHandler := house.NewHouseHandler(houseRepository)
 
 	server := api.NewServer(authHandler, flatHandler, houseHandler)
-	server.Run(":8080")
+	server.Run(":" + servicePort)
+}
+
+func main() {
+	run()
 }

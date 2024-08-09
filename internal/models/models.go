@@ -53,3 +53,8 @@ type House struct {
 type FlatCreateResponse200 struct {
 	Flat *Flat
 }
+
+type FlatUpdateRequestBody struct {
+	FlatId int    `json:"flat_id"`
+	Status Status `json:"status"`
+}

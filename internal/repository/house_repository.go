@@ -37,7 +37,7 @@ func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId ui
 	// TODO: add transactions
 	query := sq.Select("*").From("flat").Where(sq.Eq{"house_id": houseId})
 	if userRole != models.Moderator {
-		query = query.Where(sq.Eq{"status": "created"})
+		query = query.Where(sq.Eq{"status": models.Approved})
 	}
 	query = query.RunWith(r.db).PlaceholderFormat(sq.Dollar)
 

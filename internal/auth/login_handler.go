@@ -19,7 +19,6 @@ func NewAuthHandler() *AuthHandler {
 
 func (h *AuthHandler) DummyLogin(c *gin.Context) {
 	userRole, ok := c.GetQuery("user_type")
-	// TODO: setup proper logging
 	if !ok {
 		// TODO: add time to retry
 		response := models.Response500{

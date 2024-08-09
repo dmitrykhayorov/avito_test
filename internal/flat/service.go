@@ -24,3 +24,23 @@ func validateFlatData(flat models.Flat) error {
 
 	return nil
 }
+
+func validateStatus(status models.Status) error {
+	validStatuses := map[models.Status]struct{}{
+		models.Created:      {},
+		models.Approved:     {},
+		models.Declined:     {},
+		models.OnModeration: {},
+	}
+
+	_, ok := validStatuses[status]
+	if !ok {
+		return errors.New("unsupported status")
+	}
+
+	if status == models.OnModeration {
+		return errors.New("status on moderation will be applied automatically, specify other status")
+	}
+
+	return nil
+}

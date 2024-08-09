@@ -8,7 +8,6 @@ import (
 )
 
 type FlatHandler struct {
-	// TODO: add repository
 	repo *repository.FlatRepository
 }
 
@@ -45,5 +44,44 @@ func (h *FlatHandler) Create(c *gin.Context) {
 }
 
 func (h *FlatHandler) Update(c *gin.Context) {
+	body := models.FlatUpdateRequestBody{}
+	err := c.BindJSON(&body)
 
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		c.Abort()
+		return
+	}
+
+	err = validateStatus(body.Status)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		c.Abort()
+		return
+	}
+
+	currentFlatStatus, err := h.repo.GetFlatStatus(body.FlatId)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		c.Abort()
+		return
+	}
+
+	if currentFlatStatus == models.OnModeration {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "already on moderation"})
+		c.Abort()
+		return
+	}
+
+	updatedFlat, err := h.repo.Update(body.FlatId, body.Status)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		c.Abort()
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedFlat)
 }
