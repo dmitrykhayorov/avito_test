@@ -17,15 +17,17 @@ func NewHouseRepository(db *sql.DB) *HouseRepository {
 }
 
 func (r *HouseRepository) Create(house models.House) (models.House, error) {
-	//h := sq.Insert("house").Columns("address", "year", "developer").
-	//	Values(house.Address, house.Year, house.Developer)
+	const op = "HouseRepository.Create"
 
-	// TODO: add transactions
+	fail := func(err error) (models.House, error) {
+		return models.House{}, fmt.Errorf("op: %v, err: %v", op, err)
+	}
+
 	ctx := context.Background()
 	tx, err := r.db.BeginTx(ctx, nil)
 
 	if err != nil {
-		return models.House{}, err
+		return fail(err)
 	}
 	defer tx.Rollback()
 
@@ -35,24 +37,28 @@ func (r *HouseRepository) Create(house models.House) (models.House, error) {
 		Scan(&house.Id, &house.Address, &house.Year, &house.Developer, &house.CreatedAt, &house.UpdatedAt)
 
 	if err != nil {
-		// TODO: change it for empty struct
-		return house, err
+		return fail(err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return models.House{}, err
+		return fail(err)
 	}
 
 	return house, nil
 }
 
 func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId uint32) ([]models.Flat, error) {
+	const op = "HouseRepository.GetFlatsByHouseID"
+
+	fail := func(err error) ([]models.Flat, error) {
+		return nil, fmt.Errorf("op: %v, err: %v", op, err)
+	}
 
 	ctx := context.Background()
 	tx, err := r.db.BeginTx(ctx, nil)
 
 	if err != nil {
-		return nil, err
+		return fail(err)
 	}
 	defer tx.Rollback()
 
@@ -62,12 +68,10 @@ func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId ui
 	}
 	query = query.RunWith(r.db).PlaceholderFormat(sq.Dollar)
 
-	q, _, _ := query.ToSql()
-	fmt.Println(q)
 	rows, err := query.Query()
 
 	if err != nil {
-		return nil, err
+		return fail(err)
 	}
 	defer rows.Close()
 
@@ -83,7 +87,7 @@ func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId ui
 	}
 
 	if err = tx.Commit(); err != nil {
-		return nil, err
+		return fail(err)
 	}
 
 	return flats, nil

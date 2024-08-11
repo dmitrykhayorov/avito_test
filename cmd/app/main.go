@@ -5,10 +5,11 @@ import (
 	"avito/internal/auth"
 	"avito/internal/flat"
 	"avito/internal/house"
+	"avito/internal/logger"
 	"avito/internal/repository"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -34,6 +35,8 @@ func loadEnvVariables() {
 }
 
 func run() {
+	logger.SetUpLogger(slog.LevelDebug)
+
 	loadEnvVariables()
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -55,7 +58,8 @@ func run() {
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatalln("cannot connect db: ", err)
+		slog.Error("cannot connect db: " + err.Error())
+		return
 	}
 
 	houseRepository := repository.NewHouseRepository(db)

@@ -4,6 +4,7 @@ import (
 	"avito/internal/models"
 	"avito/internal/repository"
 	"github.com/gin-gonic/gin"
+	"log/slog"
 	"net/http"
 	"strconv"
 )
@@ -31,7 +32,11 @@ func (h *HouseHandler) GetFlatsByHouseID(c *gin.Context) {
 	}
 	flats, err := h.repo.GetFlatsByHouseID(models.UserRole(u), uint32(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.ErrorContext(c, err.Error())
+		response := models.Response500{
+			Message: err.Error(),
+		}
+		c.JSON(http.StatusInternalServerError, response)
 		c.Abort()
 		return
 	}
@@ -59,7 +64,11 @@ func (h *HouseHandler) Create(c *gin.Context) {
 	house, err = h.repo.Create(house)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.ErrorContext(c, err.Error())
+		response := models.Response500{
+			Message: err.Error(),
+		}
+		c.JSON(http.StatusInternalServerError, response)
 		c.Abort()
 		return
 	}

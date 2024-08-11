@@ -4,6 +4,7 @@ import (
 	"avito/internal/models"
 	"avito/internal/repository"
 	"github.com/gin-gonic/gin"
+	"log/slog"
 	"net/http"
 )
 
@@ -36,7 +37,11 @@ func (h *FlatHandler) Create(c *gin.Context) {
 
 	flat, err = h.repo.Create(flat)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.ErrorContext(c, err.Error())
+		response := models.Response500{
+			Message: err.Error(),
+		}
+		c.JSON(http.StatusInternalServerError, response)
 		c.Abort()
 		return
 	}
@@ -64,7 +69,11 @@ func (h *FlatHandler) Update(c *gin.Context) {
 	currentFlatStatus, err := h.repo.GetFlatStatus(body.FlatId)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		slog.ErrorContext(c, err.Error())
+		response := models.Response500{
+			Message: err.Error(),
+		}
+		c.JSON(http.StatusInternalServerError, response)
 		c.Abort()
 		return
 	}
@@ -78,7 +87,11 @@ func (h *FlatHandler) Update(c *gin.Context) {
 	updatedFlat, err := h.repo.Update(body.FlatId, body.Status)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		slog.ErrorContext(c, err.Error())
+		response := models.Response500{
+			Message: err.Error(),
+		}
+		c.JSON(http.StatusInternalServerError, response)
 		c.Abort()
 		return
 	}

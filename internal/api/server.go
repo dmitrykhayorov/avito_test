@@ -6,7 +6,7 @@ import (
 	"avito/internal/house"
 	"avito/internal/models"
 	"github.com/gin-gonic/gin"
-	"log"
+	"log/slog"
 )
 
 type Server struct {
@@ -32,16 +32,13 @@ func (s *Server) routes() {
 	authRoutes := s.Router.Group("/")
 	authRoutes.GET("/dummyLogin", s.authHandler.DummyLogin)
 
-	// TODO: implement
 	flatRoutes := s.Router.Group("/flat")
 	flatRoutes.Use(auth.AuthMiddleware())
 	{
 		flatRoutes.POST("/create", s.flatHandler.Create)
-		// TODO: create handler for updating a flat
 		flatRoutes.POST("/update", auth.RoleMiddleware(models.Moderator), s.flatHandler.Update)
 	}
 
-	// TODO: implement house logic
 	houseRoutes := s.Router.Group("/house")
 	houseRoutes.Use(auth.AuthMiddleware())
 	{
@@ -53,6 +50,7 @@ func (s *Server) routes() {
 
 func (s *Server) Run(addr string) {
 	if err := s.Router.Run(addr); err != nil {
-		log.Fatalf("Failed to run server: %v", err)
+		slog.Error("failed to run server: " + err.Error())
+		return
 	}
 }

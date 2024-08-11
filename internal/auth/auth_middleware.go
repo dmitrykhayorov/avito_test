@@ -3,8 +3,8 @@ package auth
 import (
 	"avito/internal/models"
 	"avito/internal/tools"
-	"fmt"
 	"github.com/gin-gonic/gin"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -27,13 +27,13 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		role, err := tools.GetRoleFromToken(tokenString)
 		if err != nil {
+			slog.Info("Unauthorized attempt: " + err.Error())
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
 
 		c.Set("userRole", string(role))
-		fmt.Println("added userRole to context")
 		c.Next()
 	}
 }
@@ -47,13 +47,13 @@ func RoleMiddleware(requiredRole models.UserRole) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
 		userRoleString := userRole.(string)
 		if models.UserRole(userRoleString) != requiredRole {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Access forbidden: insufficient permissions"})
 			c.Abort()
 			return
 		}
-		fmt.Println("role validated")
 		c.Next()
 	}
 }

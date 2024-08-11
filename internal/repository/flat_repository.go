@@ -20,11 +20,16 @@ func NewFlatRepository(db *sql.DB) *FlatRepository {
 }
 
 func (r *FlatRepository) Create(flat models.Flat) (models.Flat, error) {
+	const op = "flatRepository.Create"
+
+	fail := func(err error) (models.Flat, error) {
+		return models.Flat{}, fmt.Errorf("op: %v, err: %v", op, err)
+	}
 
 	ctx := context.Background()
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return models.Flat{}, err
+		return fail(err)
 	}
 
 	defer tx.Rollback()
@@ -44,7 +49,7 @@ func (r *FlatRepository) Create(flat models.Flat) (models.Flat, error) {
 	rows, err := query.RunWith(r.db).Query()
 
 	if err != nil {
-		return models.Flat{}, err
+		return fail(err)
 	}
 
 	defer rows.Close()
@@ -56,18 +61,23 @@ func (r *FlatRepository) Create(flat models.Flat) (models.Flat, error) {
 	}
 
 	if err = tx.Commit(); err != nil {
-		return models.Flat{}, err
+		return fail(err)
 	}
 
 	return flat, nil
 }
 
 func (r *FlatRepository) GetFlatStatus(flatId int) (models.Status, error) {
+	const op = "flatRepository.GetFlatStatus"
+
+	fail := func(err error) (models.Status, error) {
+		return "", fmt.Errorf("op: %v, err: %v", op, err)
+	}
 
 	ctx := context.Background()
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return "", err
+		return fail(err)
 	}
 
 	defer tx.Rollback()
@@ -78,23 +88,30 @@ func (r *FlatRepository) GetFlatStatus(flatId int) (models.Status, error) {
 	var status models.Status
 	row := query.RunWith(r.db).QueryRow()
 	err = row.Scan(&status)
+
 	if err != nil {
-		return "", nil
+		return fail(err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return "", err
+		return fail(err)
 	}
 
 	return status, nil
 }
 
 func (r *FlatRepository) Update(flatId int, status models.Status) (models.Flat, error) {
+	const op = "flatRepository.Update"
+
+	fail := func(err error) (models.Flat, error) {
+		return models.Flat{}, fmt.Errorf("op: %v, err: %v", op, err)
+	}
+
 	ctx := context.Background()
 	tx, err := r.db.BeginTx(ctx, nil)
 
 	if err != nil {
-		return models.Flat{}, err
+		return fail(err)
 	}
 	defer tx.Rollback()
 
@@ -104,17 +121,17 @@ func (r *FlatRepository) Update(flatId int, status models.Status) (models.Flat, 
 	_, err = putOnModeration.RunWith(r.db).Query()
 	if err != nil {
 		errorString := fmt.Sprintf("unable to put flat_id: %d on moderation", flatId)
-		return models.Flat{}, errors.New(errorString)
+		return fail(errors.New(errorString))
 	}
 
 	if err = tx.Commit(); err != nil {
-		return models.Flat{}, err
+		return fail(err)
 	}
 
 	tx, err = r.db.BeginTx(ctx, nil)
 
 	if err != nil {
-		return models.Flat{}, err
+		return fail(err)
 	}
 	defer tx.Rollback()
 
@@ -129,11 +146,11 @@ func (r *FlatRepository) Update(flatId int, status models.Status) (models.Flat, 
 		&updatedFlat.Status, &updatedFlat.CreatedAt)
 
 	if err != nil {
-		return models.Flat{}, errors.New("unable to retrieve data from updated flat:" + err.Error())
+		return fail(errors.New("unable to retrieve data from updated flat:" + err.Error()))
 	}
 
 	if err = tx.Commit(); err != nil {
-		return models.Flat{}, err
+		return fail(err)
 	}
 
 	return updatedFlat, nil
