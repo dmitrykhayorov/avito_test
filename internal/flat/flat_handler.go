@@ -3,16 +3,17 @@ package flat
 import (
 	"avito/internal/models"
 	"avito/internal/repository"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log/slog"
 	"net/http"
 )
 
 type FlatHandler struct {
-	repo *repository.FlatRepository
+	repo repository.FlatRepositoryInterface
 }
 
-func NewFlatHandler(repo *repository.FlatRepository) *FlatHandler {
+func NewFlatHandler(repo repository.FlatRepositoryInterface) *FlatHandler {
 	return &FlatHandler{
 		repo: repo,
 	}
@@ -58,7 +59,7 @@ func (h *FlatHandler) Update(c *gin.Context) {
 		return
 	}
 
-	err = validateStatus(body.Status)
+	err = validateUpdateRequestBody(body)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
@@ -70,21 +71,19 @@ func (h *FlatHandler) Update(c *gin.Context) {
 
 	if err != nil {
 		slog.ErrorContext(c, err.Error())
-		response := models.Response500{
-			Message: err.Error(),
-		}
-		c.JSON(http.StatusInternalServerError, response)
+		response := fmt.Sprintf("flat: %v in house %v not found", body.FlatId, body.HouseId)
+		c.JSON(http.StatusBadRequest, gin.H{"message": response})
 		c.Abort()
 		return
 	}
 
-	if currentFlatStatus == models.OnModeration {
+	if currentFlatStatus == models.StatusOnModeration {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "already on moderation"})
 		c.Abort()
 		return
 	}
 
-	updatedFlat, err := h.repo.Update(body.FlatId, body.Status)
+	updatedFlat, err := h.repo.Update(body.FlatId, body.HouseId, body.Status)
 
 	if err != nil {
 		slog.ErrorContext(c, err.Error())

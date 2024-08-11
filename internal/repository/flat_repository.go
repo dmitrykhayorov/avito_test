@@ -9,6 +9,12 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
+type FlatRepositoryInterface interface {
+	Create(flat models.Flat) (models.Flat, error)
+	GetFlatStatus(flatId int) (models.Status, error)
+	Update(flatId int, houseId int, status models.Status) (models.Flat, error)
+}
+
 type FlatRepository struct {
 	db *sql.DB
 }
@@ -55,7 +61,7 @@ func (r *FlatRepository) Create(flat models.Flat) (models.Flat, error) {
 	defer rows.Close()
 
 	rows.Next()
-	if err := rows.Scan(&flat.Number, &flat.HouseId, &flat.Price,
+	if err := rows.Scan(&flat.Id, &flat.HouseId, &flat.Price,
 		&flat.Rooms, &flat.Status, &flat.CreatedAt); err != nil {
 		return models.Flat{}, err
 	}
@@ -100,7 +106,7 @@ func (r *FlatRepository) GetFlatStatus(flatId int) (models.Status, error) {
 	return status, nil
 }
 
-func (r *FlatRepository) Update(flatId int, status models.Status) (models.Flat, error) {
+func (r *FlatRepository) Update(flatId int, houseId int, status models.Status) (models.Flat, error) {
 	const op = "flatRepository.Update"
 
 	fail := func(err error) (models.Flat, error) {
@@ -115,8 +121,8 @@ func (r *FlatRepository) Update(flatId int, status models.Status) (models.Flat, 
 	}
 	defer tx.Rollback()
 
-	putOnModeration := sq.Update("flat").Set("status", models.OnModeration).
-		Where(sq.Eq{"id": flatId}).PlaceholderFormat(sq.Dollar)
+	putOnModeration := sq.Update("flat").Set("status", models.StatusOnModeration).
+		Where(sq.Eq{"id": flatId, "house_id": houseId}).PlaceholderFormat(sq.Dollar)
 
 	_, err = putOnModeration.RunWith(r.db).Query()
 	if err != nil {
@@ -136,13 +142,13 @@ func (r *FlatRepository) Update(flatId int, status models.Status) (models.Flat, 
 	defer tx.Rollback()
 
 	updateStatusQuery := sq.Update("flat").Set("status", status).
-		Where(sq.Eq{"id": flatId}).Suffix("RETURNING *").PlaceholderFormat(sq.Dollar)
+		Where(sq.Eq{"id": flatId, "house_id": houseId}).Suffix("RETURNING *").PlaceholderFormat(sq.Dollar)
 
 	row := updateStatusQuery.RunWith(r.db).QueryRow()
 
 	var updatedFlat models.Flat
 
-	err = row.Scan(&updatedFlat.Number, &updatedFlat.HouseId, &updatedFlat.Price, &updatedFlat.Rooms,
+	err = row.Scan(&updatedFlat.Id, &updatedFlat.HouseId, &updatedFlat.Price, &updatedFlat.Rooms,
 		&updatedFlat.Status, &updatedFlat.CreatedAt)
 
 	if err != nil {

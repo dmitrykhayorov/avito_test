@@ -1,4 +1,4 @@
-CREATE DATABASE margertf;
+-- CREATE DATABASE margertf;
 
 CREATE TABLE IF NOT EXISTS "user" (
     id SERIAL PRIMARY KEY,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS "house" (
 );
 
 CREATE TABLE IF NOT EXISTS "flat" (
-    id SERIAL,
+    id INT,
     house_id INT NOT NULL REFERENCES house(id),
     price INT NOT NULL,
     rooms INT DEFAULT 1,
@@ -27,17 +27,60 @@ CREATE TABLE IF NOT EXISTS "flat" (
     PRIMARY KEY (id, house_id)
 );
 
-CREATE OR REPLACE FUNCTION refresh_last_flat_added()
+CREATE OR REPLACE FUNCTION create_flat_sequence()
     RETURNS TRIGGER AS $$
 BEGIN
-UPDATE house
-SET last_flat_added = CURRENT_TIMESTAMP
-WHERE id = NEW.house_id;
-RETURN NEW;
+    EXECUTE format('CREATE SEQUENCE flat_seq_%s START 1', NEW.id);
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER after_flat_insert
-    AFTER INSERT ON flat
+CREATE OR REPLACE TRIGGER trg_create_flat_sequence
+    AFTER INSERT ON house
+    FOR EACH ROW
+    EXECUTE FUNCTION create_flat_sequence();
+
+
+CREATE OR REPLACE FUNCTION assign_flat_id()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.id := nextval('flat_seq_' || NEW.house_id);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER trg_assign_flat_id
+    BEFORE INSERT ON flat
+    FOR EACH ROW
+    EXECUTE FUNCTION assign_flat_id();
+
+
+CREATE OR REPLACE FUNCTION refresh_last_flat_added()
+    RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE house
+    SET last_flat_added = CURRENT_TIMESTAMP
+    WHERE id = NEW.house_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER trg_after_flat_insert
+    AfTER INSERT ON flat
     FOR EACH ROW
     EXECUTE FUNCTION refresh_last_flat_added();
+
+
+CREATE OR REPLACE FUNCTION delete_house_seq()
+RETURNS TRIGGER AS $$
+BEGIN
+    EXECUTE 'DROP SEQUENCE IF EXISTS ' || 'flat_seq_' || OLD.id  || ' CASCADE';
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE TRIGGER trg_after_delete_house
+    AFTER DELETE ON house
+    FOR EACH ROW
+    EXECUTE FUNCTION delete_house_seq();

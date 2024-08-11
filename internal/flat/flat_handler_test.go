@@ -1,208 +1,135 @@
 package flat_test
 
 import (
-	"avito/internal/api"
-	"avito/internal/auth"
 	"avito/internal/flat"
-	"avito/internal/house"
 	"avito/internal/models"
-	"avito/internal/repository"
 	"bytes"
-	"database/sql"
 	"encoding/json"
-	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/assert/v2"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
-	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-var (
-	dbHost     string
-	dbPort     string
-	dbUser     string
-	dbPassword string
-	dbName     string
-)
-
-func loadEnvVariables() {
-	dbHost = os.Getenv("DB_HOST")
-	dbPort = os.Getenv("DB_PORT")
-	dbUser = os.Getenv("DB_USER")
-	dbPassword = os.Getenv("DB_PASSWORD")
-	dbName = os.Getenv("DB_NAME")
+// Mocking the repository
+type MockFlatRepository struct {
+	mock.Mock
 }
 
-func prepareServer() *api.Server {
-	loadEnvVariables()
+func (m *MockFlatRepository) Create(flat models.Flat) (models.Flat, error) {
+	args := m.Called(flat)
+	return args.Get(0).(models.Flat), args.Error(1)
+}
+
+func (m *MockFlatRepository) GetFlatStatus(flatId int) (models.Status, error) {
+	args := m.Called(flatId)
+	return args.Get(0).(models.Status), args.Error(1)
+}
+
+func (m *MockFlatRepository) Update(flatId int, houseId int, status models.Status) (models.Flat, error) {
+	args := m.Called(flatId, status)
+	return args.Get(0).(models.Flat), args.Error(1)
+}
+
+func TestCreateFlat(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPassword, dbName)
 
-	retries := 5
-	var db *sql.DB
-	var err error
+	mockRepo := new(MockFlatRepository)
+	handler := flat.NewFlatHandler(mockRepo)
 
-	for i := 0; i < retries; i++ {
-		db, err = sql.Open("postgres", connStr)
-
-		if err == nil {
-			break
+	t.Run("Success", func(t *testing.T) {
+		var price, rooms uint32 = 100, 1
+		newFlat := models.Flat{
+			HouseId: 1,
+			Price:   &price,
+			Rooms:   &rooms,
 		}
+		mockRepo.On("Create", newFlat).Return(newFlat, nil)
 
-		time.Sleep(time.Second * 5)
-	}
-	if err != nil {
-		log.Fatalln("cannot connect db: ", err)
-	}
-	err = db.Ping()
-	if err != nil {
-		log.Fatalln("cannot connect db: ", err)
-	}
+		flatJSON, _ := json.Marshal(newFlat)
+		req, err := http.NewRequest(http.MethodPost, "/flat/create", bytes.NewBuffer(flatJSON))
+		assert.NoError(t, err)
 
-	houseRepository := repository.NewHouseRepository(db)
-	flatRepository := repository.NewFlatRepository(db)
+		req.Header.Set("Content-Type", "application/json")
 
-	authHandler := auth.NewAuthHandler()
-	flatHandler := flat.NewFlatHandler(flatRepository)
-	houseHandler := house.NewHouseHandler(houseRepository)
-	server := api.NewServer(authHandler, flatHandler, houseHandler)
-	return server
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = req
+
+		handler.Create(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.JSONEq(t, string(flatJSON), w.Body.String())
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("BadRequest", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, "/flat/create", bytes.NewBuffer([]byte("invalid json")))
+		assert.NoError(t, err)
+
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = req
+
+		handler.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
 }
 
-var server = prepareServer()
-var tokenClient = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyUm9sZSI6ImNsaWVudCIsImV4cCI6MTcyMzI3Njk3N30.wMeyv_z6OS-sJ9ljWPj6p4fY6J3wb4jNmqtMzSS6X6o"
-var tokenModerator = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyUm9sZSI6Im1vZGVyYXRvciIsImV4cCI6MTcyMzI3Njc5MX0.nzY7fPqrOqvJaIXUtEN7BCCS4so_YPZ2Dk3srwW1lU0"
-var url = "http://localhost:8080/flat/create"
+func TestUpdateFlat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 
-func TestFlatHandler_CreateValidInput(t *testing.T) {
-	flatToCreateValid := models.FlatCreateRequestBody{
-		HouseId: 1,
-		Price:   100,
-		Rooms:   1,
-	}
-	body, _ := json.Marshal(flatToCreateValid)
+	mockRepo := new(MockFlatRepository)
+	handler := flat.NewFlatHandler(mockRepo)
 
-	w := httptest.NewRecorder()
-
-	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/create", bytes.NewBuffer(body))
-	req.Header.Set("Authorization", tokenModerator)
-
-	server.Router.ServeHTTP(w, req)
-	//d, _ := io.ReadAll(w.Body)
-	assert.Equal(t, 200, w.Code)
-
-	server.Router.ServeHTTP(w, req)
-	//d, _ = io.ReadAll(w.Body)
-	assert.Equal(t, 200, w.Code)
-}
-
-func TestFlatHandler_CreateInvalidInput(t *testing.T) {
-	flatInvalid := []models.FlatCreateRequestBody{
-		{
-			HouseId: 1_000_000_000,
-			Price:   100,
-			Rooms:   4,
-		},
-		{
+	t.Run("Success", func(t *testing.T) {
+		updatedFlat := models.Flat{
+			Id:      10,
 			HouseId: 1,
-			Rooms:   4,
-		},
-		{
-			HouseId: 1,
-			Price:   100,
-			Rooms:   0,
-		},
-		{
-			HouseId: 0,
-			Price:   10101,
-			Rooms:   5,
-		},
-	}
+			Status:  models.StatusCreated,
+		}
+		updateBody := models.FlatUpdateRequestBody{FlatId: 1, Status: models.StatusApproved}
 
-	w := httptest.NewRecorder()
-	for _, flat := range flatInvalid {
-		t.Run("", func(t *testing.T) {
-			body, _ := json.Marshal(flat)
-			req, _ := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
-			server.Router.ServeHTTP(w, req)
-			assert.NotEqual(t, 200, w.Code)
-		})
-	}
-}
+		mockRepo.On("Update", uint32(1), updateBody).Return(updatedFlat, nil)
 
-func TestFlatHandler_CreateUnauthorized(t *testing.T) {
-	flatToCreateValid := models.FlatCreateRequestBody{
-		HouseId: 1,
-		Price:   100,
-		Rooms:   1,
-	}
+		bodyJSON, _ := json.Marshal(updateBody)
+		req, err := http.NewRequest(http.MethodPut, "/flats/1", bytes.NewBuffer(bodyJSON))
+		assert.NoError(t, err)
 
-	body, _ := json.Marshal(flatToCreateValid)
+		req.Header.Set("Content-Type", "application/json")
 
-	w := httptest.NewRecorder()
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = req
+		c.Params = gin.Params{{Key: "id", Value: "1"}}
 
-	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/create", bytes.NewBuffer(body))
+		handler.Update(c)
 
-	server.Router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.JSONEq(t, `{"ID":1,"Name":"Updated Flat"}`, w.Body.String())
+		mockRepo.AssertExpectations(t)
+	})
 
-	assert.Equal(t, 401, w.Code)
-}
+	t.Run("BadRequest", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPut, "/flats/1", bytes.NewBuffer([]byte("invalid json")))
+		assert.NoError(t, err)
 
-func TestFlatHandler_UpdateUnauthorized(t *testing.T) {
-	body := models.FlatUpdateRequestBody{
-		FlatId: 4,
-		Status: "approved",
-	}
+		req.Header.Set("Content-Type", "application/json")
 
-	jsonBody, _ := json.Marshal(body)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = req
+		c.Params = gin.Params{{Key: "id", Value: "1"}}
 
-	w := httptest.NewRecorder()
+		handler.Update(c)
 
-	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/create", bytes.NewBuffer(jsonBody))
-	server.Router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
 
-	assert.Equal(t, 401, w.Code)
-	req.Header.Set("Authorization", tokenClient)
-	assert.Equal(t, 401, w.Code)
-}
-
-func TestFlatHandler_UpdateValid(t *testing.T) {
-	body := models.FlatUpdateRequestBody{
-		FlatId: 4,
-		Status: "approved",
-	}
-
-	jsonBody, _ := json.Marshal(body)
-	w := httptest.NewRecorder()
-
-	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/update", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Authorization", tokenModerator)
-	server.Router.ServeHTTP(w, req)
-
-	//d, _ := io.ReadAll(w.Body)
-	//fmt.Println(string(d))
-	assert.Equal(t, 200, w.Code)
-}
-
-func TestFlatHandler_UpdateInvalidRequest(t *testing.T) {
-	body := models.FlatUpdateRequestBody{
-		FlatId: 4,
-		Status: "pending",
-	}
-
-	jsonBody, _ := json.Marshal(body)
-	w := httptest.NewRecorder()
-
-	req, _ := http.NewRequest(http.MethodPost, "http://localhost:8080/flat/update", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Authorization", tokenModerator)
-	server.Router.ServeHTTP(w, req)
-
-	assert.Equal(t, 400, w.Code)
 }

@@ -6,21 +6,20 @@ type UserRole string
 type Status string
 
 const (
-	Moderator    UserRole = "moderator"
-	Client       UserRole = "client"
-	Created      Status   = "created"
-	Approved     Status   = "approved"
-	Declined     Status   = "declined"
-	OnModeration Status   = "on moderation"
+	// Possible users roles
+	Moderator UserRole = "moderator"
+	Client    UserRole = "client"
+	// Moderation statuses of flats
+	StatusCreated      Status = "created"
+	StatusApproved     Status = "approved"
+	StatusDeclined     Status = "declined"
+	StatusOnModeration Status = "on moderation"
 )
 
 type Response500 struct {
-	// Описание ошибки
-	Message string `json:"message"`
-	// Идентификатор запроса. Предназначен для более быстрого поиска проблем.
+	Message   string `json:"message"`
 	RequestId string `json:"request_id,omitempty"`
-	// Код ошибки. Предназначен для классификации проблем и более быстрого решения проблем.
-	Code int32 `json:"code,omitempty"`
+	Code      int32  `json:"code,omitempty"`
 }
 
 type AutResponse200 struct {
@@ -28,15 +27,10 @@ type AutResponse200 struct {
 }
 
 type Flat struct {
-	// Number of a flat
-	Number uint32 `json:"id"`
-	// HouseId id of a house
-	HouseId uint32 `json:"house_id"`
-	// Price is a price of a flat
-	Price *uint32 `json:"price"`
-	// Rooms is number of rooms in a flat
-	Rooms *uint32 `json:"rooms"`
-	// Status of a flat
+	Id        uint32     `json:"id"`
+	HouseId   uint32     `json:"house_id"`
+	Price     *uint32    `json:"price"`
+	Rooms     *uint32    `json:"rooms"`
 	Status    Status     `json:"status"`
 	CreatedAt *time.Time `json:"created_at"`
 }
@@ -61,6 +55,7 @@ type FlatCreateResponse200 struct {
 }
 
 type FlatUpdateRequestBody struct {
-	FlatId int    `json:"flat_id"`
-	Status Status `json:"status"`
+	FlatId  int    `json:"id"`
+	HouseId int    `json:"house_id"`
+	Status  Status `json:"status"`
 }

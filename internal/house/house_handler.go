@@ -10,10 +10,10 @@ import (
 )
 
 type HouseHandler struct {
-	repo *repository.HouseRepository
+	repo repository.HouseRepositoryInterface
 }
 
-func NewHouseHandler(repo *repository.HouseRepository) *HouseHandler {
+func NewHouseHandler(repo repository.HouseRepositoryInterface) *HouseHandler {
 	return &HouseHandler{repo: repo}
 }
 
@@ -24,13 +24,12 @@ func (h *HouseHandler) GetFlatsByHouseID(c *gin.Context) {
 		c.Abort()
 		return
 	}
-	// TODO: add proper check
 	userRole, _ := c.Get("userRole")
 	u, ok := userRole.(string)
 	if !ok {
 		return
 	}
-	flats, err := h.repo.GetFlatsByHouseID(models.UserRole(u), uint32(id))
+	flats, err := h.repo.GetFlatsByHouseID(models.UserRole(u), id)
 	if err != nil {
 		slog.ErrorContext(c, err.Error())
 		response := models.Response500{

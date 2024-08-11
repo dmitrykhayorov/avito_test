@@ -25,21 +25,29 @@ func validateFlatData(flat models.Flat) error {
 	return nil
 }
 
-func validateStatus(status models.Status) error {
+func validateUpdateRequestBody(body models.FlatUpdateRequestBody) error {
 	validStatuses := map[models.Status]struct{}{
-		models.Created:      {},
-		models.Approved:     {},
-		models.Declined:     {},
-		models.OnModeration: {},
+		models.StatusCreated:      {},
+		models.StatusApproved:     {},
+		models.StatusDeclined:     {},
+		models.StatusOnModeration: {},
 	}
 
-	_, ok := validStatuses[status]
+	_, ok := validStatuses[body.Status]
 	if !ok {
 		return errors.New("unsupported status")
 	}
 
-	if status == models.OnModeration {
+	if body.Status == models.StatusOnModeration {
 		return errors.New("status on moderation will be applied automatically, specify other status")
+	}
+
+	if body.FlatId < 1 {
+		return errors.New("flat_id is less than 1")
+	}
+
+	if body.HouseId < 1 {
+		return errors.New("house_id is less than 1")
 	}
 
 	return nil

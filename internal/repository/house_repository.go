@@ -8,6 +8,11 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
+type HouseRepositoryInterface interface {
+	Create(house models.House) (models.House, error)
+	GetFlatsByHouseID(userRole models.UserRole, houseId int) ([]models.Flat, error)
+}
+
 type HouseRepository struct {
 	db *sql.DB
 }
@@ -47,7 +52,7 @@ func (r *HouseRepository) Create(house models.House) (models.House, error) {
 	return house, nil
 }
 
-func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId uint32) ([]models.Flat, error) {
+func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId int) ([]models.Flat, error) {
 	const op = "HouseRepository.GetFlatsByHouseID"
 
 	fail := func(err error) ([]models.Flat, error) {
@@ -64,7 +69,7 @@ func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId ui
 
 	query := sq.Select("*").From("flat").Where(sq.Eq{"house_id": houseId})
 	if userRole != models.Moderator {
-		query = query.Where(sq.Eq{"status": models.Approved})
+		query = query.Where(sq.Eq{"status": models.StatusApproved})
 	}
 	query = query.RunWith(r.db).PlaceholderFormat(sq.Dollar)
 
@@ -79,7 +84,7 @@ func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId ui
 
 	for rows.Next() {
 		var placeholder models.Flat
-		if err := rows.Scan(&placeholder.Number, &placeholder.HouseId, &placeholder.Price,
+		if err := rows.Scan(&placeholder.Id, &placeholder.HouseId, &placeholder.Price,
 			&placeholder.Rooms, &placeholder.Status, &placeholder.CreatedAt); err != nil {
 			return nil, err
 		}

@@ -544,12 +544,15 @@ components:
     flat_update_body:
       required:
       - id
+      - house_id
       - price
       - room
       type: object
       properties:
         id:
           $ref: '#/components/schemas/FlatId'
+        house_id:
+          $ref: '#/components/schemas/HouseId'
         status:
           $ref: '#/components/schemas/Status'
   responses:
