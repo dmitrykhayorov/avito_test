@@ -2,6 +2,7 @@ package repository
 
 import (
 	"avito/internal/models"
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -19,8 +20,18 @@ func NewFlatRepository(db *sql.DB) *FlatRepository {
 }
 
 func (r *FlatRepository) Create(flat models.Flat) (models.Flat, error) {
+
+	ctx := context.Background()
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return models.Flat{}, err
+	}
+
+	defer tx.Rollback()
+
 	columns := []string{"house_id", "price"}
 	values := []interface{}{flat.HouseId, flat.Price}
+
 	if flat.Rooms != nil {
 		columns = append(columns, "rooms")
 		values = append(values, flat.Rooms)
@@ -36,9 +47,15 @@ func (r *FlatRepository) Create(flat models.Flat) (models.Flat, error) {
 		return models.Flat{}, err
 	}
 
+	defer rows.Close()
+
 	rows.Next()
 	if err := rows.Scan(&flat.Number, &flat.HouseId, &flat.Price,
 		&flat.Rooms, &flat.Status, &flat.CreatedAt); err != nil {
+		return models.Flat{}, err
+	}
+
+	if err = tx.Commit(); err != nil {
 		return models.Flat{}, err
 	}
 
@@ -46,27 +63,60 @@ func (r *FlatRepository) Create(flat models.Flat) (models.Flat, error) {
 }
 
 func (r *FlatRepository) GetFlatStatus(flatId int) (models.Status, error) {
+
+	ctx := context.Background()
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", err
+	}
+
+	defer tx.Rollback()
+
 	query := sq.Select("status").From("flat").
 		Where(sq.Eq{"id": flatId}).PlaceholderFormat(sq.Dollar)
 
 	var status models.Status
 	row := query.RunWith(r.db).QueryRow()
-	err := row.Scan(&status)
+	err = row.Scan(&status)
 	if err != nil {
 		return "", nil
 	}
+
+	if err = tx.Commit(); err != nil {
+		return "", err
+	}
+
 	return status, nil
 }
 
 func (r *FlatRepository) Update(flatId int, status models.Status) (models.Flat, error) {
+	ctx := context.Background()
+	tx, err := r.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return models.Flat{}, err
+	}
+	defer tx.Rollback()
+
 	putOnModeration := sq.Update("flat").Set("status", models.OnModeration).
 		Where(sq.Eq{"id": flatId}).PlaceholderFormat(sq.Dollar)
 
-	_, err := putOnModeration.RunWith(r.db).Query()
+	_, err = putOnModeration.RunWith(r.db).Query()
 	if err != nil {
 		errorString := fmt.Sprintf("unable to put flat_id: %d on moderation", flatId)
 		return models.Flat{}, errors.New(errorString)
 	}
+
+	if err = tx.Commit(); err != nil {
+		return models.Flat{}, err
+	}
+
+	tx, err = r.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return models.Flat{}, err
+	}
+	defer tx.Rollback()
 
 	updateStatusQuery := sq.Update("flat").Set("status", status).
 		Where(sq.Eq{"id": flatId}).Suffix("RETURNING *").PlaceholderFormat(sq.Dollar)
@@ -79,8 +129,11 @@ func (r *FlatRepository) Update(flatId int, status models.Status) (models.Flat, 
 		&updatedFlat.Status, &updatedFlat.CreatedAt)
 
 	if err != nil {
-		fmt.Println(err)
-		return models.Flat{}, errors.New("unable to retrieve data from updated flat")
+		return models.Flat{}, errors.New("unable to retrieve data from updated flat:" + err.Error())
+	}
+
+	if err = tx.Commit(); err != nil {
+		return models.Flat{}, err
 	}
 
 	return updatedFlat, nil

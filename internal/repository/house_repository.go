@@ -2,6 +2,7 @@ package repository
 
 import (
 	"avito/internal/models"
+	"context"
 	"database/sql"
 	"fmt"
 	sq "github.com/Masterminds/squirrel"
@@ -20,9 +21,17 @@ func (r *HouseRepository) Create(house models.House) (models.House, error) {
 	//	Values(house.Address, house.Year, house.Developer)
 
 	// TODO: add transactions
+	ctx := context.Background()
+	tx, err := r.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return models.House{}, err
+	}
+	defer tx.Rollback()
+
 	query := `INSERT INTO house (address,year,developer) VALUES ($1, $2, $3) RETURNING *`
 
-	err := r.db.QueryRow(query, house.Address, house.Year, house.Developer).
+	err = r.db.QueryRow(query, house.Address, house.Year, house.Developer).
 		Scan(&house.Id, &house.Address, &house.Year, &house.Developer, &house.CreatedAt, &house.UpdatedAt)
 
 	if err != nil {
@@ -30,11 +39,23 @@ func (r *HouseRepository) Create(house models.House) (models.House, error) {
 		return house, err
 	}
 
+	if err = tx.Commit(); err != nil {
+		return models.House{}, err
+	}
+
 	return house, nil
 }
 
 func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId uint32) ([]models.Flat, error) {
-	// TODO: add transactions
+
+	ctx := context.Background()
+	tx, err := r.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	query := sq.Select("*").From("flat").Where(sq.Eq{"house_id": houseId})
 	if userRole != models.Moderator {
 		query = query.Where(sq.Eq{"status": models.Approved})
@@ -59,6 +80,10 @@ func (r *HouseRepository) GetFlatsByHouseID(userRole models.UserRole, houseId ui
 			return nil, err
 		}
 		flats = append(flats, placeholder)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
 	}
 
 	return flats, nil
