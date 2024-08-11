@@ -20,16 +20,20 @@ func NewHouseHandler(repo repository.HouseRepositoryInterface) *HouseHandler {
 func (h *HouseHandler) GetFlatsByHouseID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		c.Abort()
 		return
 	}
-	userRole, _ := c.Get("userRole")
-	u, ok := userRole.(string)
+	u, _ := c.Get("userRole")
+	userRole, ok := u.(string)
 	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "cannot get user role"})
+		c.Abort()
 		return
 	}
-	flats, err := h.repo.GetFlatsByHouseID(models.UserRole(u), id)
+
+	flats, err := h.repo.GetFlatsByHouseID(models.UserRole(userRole), id)
+
 	if err != nil {
 		slog.ErrorContext(c, err.Error())
 		response := models.Response500{

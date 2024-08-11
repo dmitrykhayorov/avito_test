@@ -28,7 +28,7 @@ type AutResponse200 struct {
 
 type Flat struct {
 	Id        uint32     `json:"id"`
-	HouseId   uint32     `json:"house_id"`
+	HouseId   int        `json:"house_id"`
 	Price     *uint32    `json:"price"`
 	Rooms     *uint32    `json:"rooms"`
 	Status    Status     `json:"status"`
